@@ -1,6 +1,10 @@
 from collections import defaultdict
 from datetime import timedelta
 from app.reasons import rejected
+def segment(patient,active,end,open_):
+    seg={'patient':patient,'bed':active['bed'],'ward':active.get('resolved',active['ward']),'start':active['time'],'end':end,'open':open_,'source':active['id']}
+    if seg['ward']!=active['ward']: seg['stated']=active['ward']
+    return seg
 def episodes(rows,end):
     groups=defaultdict(list);bad=[];retained=[];intervals=[]
     keys=defaultdict(list)
@@ -22,8 +26,8 @@ def episodes(rows,end):
                 if active is None:bad.append(rejected(row,'ORPHAN','没有入院事件'));continue
                 if action=='discharge' and row['bed']!=active['bed']:bad.append(rejected(row,'STATE','出院床号不符'));continue
                 if row['time']>active['time']:
-                    intervals.append({'patient':patient,'bed':active['bed'],'ward':active['ward'],'start':active['time'],'end':row['time'],'open':False,'source':active['id']})
+                    intervals.append(segment(patient,active,row['time'],False))
                 active=row if action=='transfer' else None
             retained.append(row)
-        if active and end>active['time']:intervals.append({'patient':patient,'bed':active['bed'],'ward':active['ward'],'start':active['time'],'end':end,'open':True,'source':active['id']})
+        if active and end>active['time']:intervals.append(segment(patient,active,end,True))
     return retained,bad,intervals
